@@ -1,35 +1,44 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+// App.jsx
+import React, { useState } from "react";
+import { Routes, Route } from 'react-router-dom';
+import './App.css';
+// Pages
+import HomePage from "./views/HomePage";
+import Dashboard from "./views/Dashboard";
+import AddProduct from "./views/AddProduct";
+import MyShop from "./views/MyShop";
+import EditProduct from "./views/EditProduct";
+import Favorites from "./views/favorites";
+import ViewCart from "./views/viewCart";
+
+// Components
+import SearchBar from "./components/SearchBar";
+import Footer from "./components/Footer";
 
 function App() {
-  const [count, setCount] = useState(0)
+  // Search state shared between HomePage/Dashboard if needed
+  //const [searchCategory, setSearchCategory] = useState("");
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+    
+      <div className="App">
+        {/* Optional: Global SearchBar if you want it on top of all pages */}
+        {/*<SearchBar onSearch={setSearchCategory} />*/}
+
+        <Routes>
+          <Route path="/" element={<HomePage searchCategory={searchCategory} />} />
+          <Route path="/dashboard" element={<Dashboard searchCategory={searchCategory} />} />
+          <Route path="/add-product" element={<AddProduct />} />
+          <Route path="/my-shop" element={<MyShop />} />
+          <Route path="/edit-product/:id" element={<EditProduct />} />
+          <Route path="/favorites" element={<Favorites />} />
+          <Route path="/cart" element={<ViewCart />} />
+        </Routes>
+
+        <Footer />
       </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    
+  );
 }
 
-export default App
+export default App;

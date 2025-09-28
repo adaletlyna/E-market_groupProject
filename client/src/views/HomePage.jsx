@@ -1,39 +1,64 @@
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { FaStore } from "react-icons/fa";
 import SearchBar from "../components/SearchBar";
-
 import logo from "../assets/logo.png.avif";
-import product1 from "../assets/product1.jpg";
-import product2 from "../assets/product2.jpg";
-import product3 from "../assets/product3.jpg";
-
-const productImages = {
-  "product1.jpg": product1,
-  "product2.jpg": product2,
-  "product3.jpg": product3,
-};
 
 const HomePage = () => {
   const [products, setProducts] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("");
-  const [categories, setCategories] = useState([]);
+  const navigate = useNavigate();
 
+  // Fetch products
   useEffect(() => {
     axios
       .get("http://localhost:5000/api/products")
-      .then((res) => {
-        setProducts(res.data);
-        const uniqueCats = [...new Set(res.data.map((p) => p.category || "Uncategorized"))];
-        setCategories(uniqueCats);
-      })
+      .then((res) => setProducts(res.data))
       .catch((err) => console.error(err));
   }, []);
 
+  // Hardcoded categories
+  const categories = [
+    "Electronics",
+    "Clothes",
+    "Books",
+    "Home & Kitchen",
+    "Beauty",
+    "Sports",
+    "Toys",
+  ];
+
+  // Filter products by category
   const filteredProducts = products.filter((p) =>
     selectedCategory ? p.category === selectedCategory : true
   );
+
+  // 🟢 Handle "Shop Now" click
+  const handleShopNow = async (productId) => {
+    try {
+      let cartId = localStorage.getItem("cartId");
+
+      // If no cart exists, create one
+      if (!cartId) {
+        const newCart = await axios.post("http://localhost:5000/api/carts");
+        cartId = newCart.data._id;
+        localStorage.setItem("cartId", cartId);
+      }
+
+      // Add product to cart
+      await axios.put(`http://localhost:5000/api/carts/${cartId}/items`, {
+        product: productId,
+        quantity: 1,
+      });
+
+      // Redirect to cart page
+      navigate("/cart");
+    } catch (error) {
+      console.error("Error adding to cart:", error);
+      alert("Something went wrong while adding to cart!");
+    }
+  };
 
   return (
     <div className="container-fluid p-3">
@@ -62,6 +87,12 @@ const HomePage = () => {
         </div>
       </header>
 
+      {/* Search Bar */}
+      <SearchBar
+        selectedCategory={selectedCategory}
+        onCategoryChange={setSelectedCategory}
+      />
+
       {/* Action Buttons */}
       <div className="text-center mb-5">
         <Link to="/dashboard" className="btn btn-success me-3">
@@ -72,13 +103,6 @@ const HomePage = () => {
         </Link>
       </div>
 
-      {/* Category Filter */}
-      <SearchBar
-        categories={categories}
-        selectedCategory={selectedCategory}
-        onCategoryChange={setSelectedCategory}
-      />
-
       {/* Show Products */}
       <section>
         <h2 className="text-center mb-4 fw-semibold">New Products!</h2>
@@ -87,11 +111,10 @@ const HomePage = () => {
             <p className="text-center text-muted">No products yet</p>
           )}
 
-          {filteredProducts.slice(0, 3).map((p, index) => {
-            const imgSrc =
-              productImages[p.image] ||
-              [product1, product2, product3][index] ||
-              "/no-image.jpg";
+          {filteredProducts.slice(0, 3).map((p) => {
+            const imgSrc = p.image
+              ? `http://localhost:5000${p.image}`
+              : "/no-image.jpg";
 
             return (
               <div key={p._id} className="col-12 col-sm-6 col-md-4">
@@ -107,14 +130,18 @@ const HomePage = () => {
                     className="card-img-top"
                     onError={(e) => (e.currentTarget.src = "/no-image.jpg")}
                   />
+
                   <div className="card-body d-flex flex-column">
                     <h5 className="card-title">{p.name}</h5>
                     <p className="card-text flex-grow-1">{p.description}</p>
                     <p className="fw-bold mb-2">${p.price}</p>
 
-                    <Link to="/cart" className="btn btn-primary mt-auto">
+                    <button
+                      className="btn btn-primary mt-auto"
+                      onClick={() => handleShopNow(p._id)}
+                    >
                       Shop Now
-                    </Link>
+                    </button>
                   </div>
                 </div>
               </div>

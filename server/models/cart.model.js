@@ -1,10 +1,8 @@
 import { Schema, model } from 'mongoose'
 
-
-
 const cartItemSchema = new Schema({
-   product: {
-    type:Schema.Types.ObjectId,
+  product: {
+    type: Schema.Types.ObjectId,
     ref: "Product",
     required: [true, "A product is required"]
   },
@@ -13,14 +11,18 @@ const cartItemSchema = new Schema({
     required: [true, "Quantity is required"],
     min: [1, "Quantity must be at least 1"]
   }
-});
+})
 
 const cartSchema = new Schema(
   {
-  items: [cartItemSchema]
+    user: {
+      type: Schema.Types.ObjectId,
+      ref: "User", 
+      required: false
+    },
+    items: [cartItemSchema]
   },
-  {timestamps: true} 
-);
-
+  { timestamps: true }
+)
 
 export default model('Cart', cartSchema)

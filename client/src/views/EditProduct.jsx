@@ -11,9 +11,12 @@ const EditProduct = () => {
     description: "",
     price: "",
     category: "",
-    image: "",
     stock: "",
   });
+
+  const [existingImages, setExistingImages] = useState([]); // already stored
+  const [newImages, setNewImages] = useState([]); // files to upload
+  const [errors, setErrors] = useState({}); // validation errors
 
   const categories = [
     "Electronics",
@@ -36,9 +39,9 @@ const EditProduct = () => {
           description: data.description || "",
           price: data.price || "",
           category: data.category || "",
-          image: data.image || "",
           stock: data.stock || "",
         });
+        setExistingImages(data.images || []);
       } catch (err) {
         console.error("❌ Error fetching product:", err);
       }
@@ -51,19 +54,44 @@ const EditProduct = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleImageChange = (e) => {
+    setNewImages(Array.from(e.target.files)); // multiple files
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setErrors({}); // reset
+
     try {
-      await axios.put(`http://localhost:5000/api/products/${id}`, {
-        ...formData,
-        price: Number(formData.price),
-        stock: Number(formData.stock),
+      const payload = new FormData();
+      payload.append("name", formData.name);
+      payload.append("description", formData.description);
+      payload.append("price", formData.price);
+      payload.append("category", formData.category);
+      payload.append("stock", formData.stock);
+
+      if (newImages.length > 0) {
+        newImages.forEach((file) => payload.append("images", file));
+      }
+
+      await axios.put(`http://localhost:5000/api/products/${id}`, payload, {
+        headers: { "Content-Type": "multipart/form-data" },
       });
+
       alert("✅ Product updated successfully!");
       navigate("/my-shop");
     } catch (error) {
-      console.error("❌ Error updating product:", error);
-      alert("Failed to update product");
+      if (error.response?.data?.errors) {
+        // Backend validation errors
+        const backendErrors = {};
+        Object.keys(error.response.data.errors).forEach((key) => {
+          backendErrors[key] = error.response.data.errors[key].message;
+        });
+        setErrors(backendErrors);
+      } else {
+        alert("❌ Failed to update product");
+        console.error("❌ Error updating product:", error.response?.data || error.message);
+      }
     }
   };
 
@@ -75,7 +103,6 @@ const EditProduct = () => {
     <div className="container mt-5">
       <h2 className="mb-4 text-center">✏️ Edit Product</h2>
 
-      {/* Navigation Links */}
       <div className="d-flex justify-content-end gap-3 mb-4">
         <Link to="/">🏠 Home</Link>
         <Link to="/my-shop">🛍️ My Shop</Link>
@@ -90,43 +117,49 @@ const EditProduct = () => {
           <label className="form-label">Product Name</label>
           <input
             type="text"
-            className="form-control"
+            className={`form-control ${errors.name ? "is-invalid" : ""}`}
             name="name"
             value={formData.name}
             onChange={handleChange}
             required
           />
+          {errors.name && <div className="invalid-feedback">{errors.name}</div>}
         </div>
 
         <div className="mb-3">
           <label className="form-label">Description</label>
           <textarea
-            className="form-control"
+            className={`form-control ${errors.description ? "is-invalid" : ""}`}
             name="description"
             value={formData.description}
             onChange={handleChange}
             rows="3"
             required
           ></textarea>
+          {errors.description && (
+            <div className="invalid-feedback">{errors.description}</div>
+          )}
         </div>
 
         <div className="mb-3">
           <label className="form-label">Price ($)</label>
           <input
             type="number"
-            className="form-control"
+            className={`form-control ${errors.price ? "is-invalid" : ""}`}
             name="price"
             value={formData.price}
             onChange={handleChange}
             required
           />
+          {errors.price && (
+            <div className="invalid-feedback">{errors.price}</div>
+          )}
         </div>
 
-        {/* ✅ Category as Dropdown */}
         <div className="mb-3">
           <label className="form-label">Category</label>
           <select
-            className="form-select"
+            className={`form-select ${errors.category ? "is-invalid" : ""}`}
             name="category"
             value={formData.category}
             onChange={handleChange}
@@ -139,28 +172,62 @@ const EditProduct = () => {
               </option>
             ))}
           </select>
-        </div>
-
-        <div className="mb-3">
-          <label className="form-label">Image URL</label>
-          <input
-            type="text"
-            className="form-control"
-            name="image"
-            value={formData.image}
-            onChange={handleChange}
-          />
+          {errors.category && (
+            <div className="invalid-feedback">{errors.category}</div>
+          )}
         </div>
 
         <div className="mb-3">
           <label className="form-label">Stock Quantity</label>
           <input
             type="number"
-            className="form-control"
+            className={`form-control ${errors.stock ? "is-invalid" : ""}`}
             name="stock"
             value={formData.stock}
             onChange={handleChange}
+            required
           />
+          {errors.stock && (
+            <div className="invalid-feedback">{errors.stock}</div>
+          )}
+        </div>
+
+        {/* ✅ Show existing images */}
+        {existingImages.length > 0 && (
+          <div className="mb-3">
+            <label className="form-label">Current Images</label>
+            <div className="d-flex gap-2 flex-wrap">
+              {existingImages.map((img, idx) => (
+                <img
+                  key={idx}
+                  src={img.startsWith("http") ? img : `http://localhost:5000/${img}`}
+                  alt={`Current ${idx}`}
+                  style={{
+                    width: "100px",
+                    height: "100px",
+                    objectFit: "cover",
+                    border: "1px solid #ddd",
+                    borderRadius: "5px",
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ✅ Upload new images (optional) */}
+        <div className="mb-3">
+          <label className="form-label">Upload New Images</label>
+          <input
+            type="file"
+            className={`form-control ${errors.images ? "is-invalid" : ""}`}
+            accept="image/*"
+            multiple
+            onChange={handleImageChange}
+          />
+          {errors.images && (
+            <div className="invalid-feedback">{errors.images}</div>
+          )}
         </div>
 
         <div className="d-flex gap-3">

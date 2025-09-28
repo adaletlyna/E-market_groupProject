@@ -1,9 +1,9 @@
 import Cart from '../models/cart.model.js'
 
-// Create a new cart
+// Create a new empty cart (can be tied to user later)
 async function createCart(req, res) {
   try {
-    const cart = await Cart.create(req.body) // saves + validates
+    const cart = await Cart.create({ items: [] })
     res.status(201).json(cart)
   } catch (error) {
     console.log(error)
@@ -11,10 +11,11 @@ async function createCart(req, res) {
   }
 }
 
-// Get one cart by ID
+// Get one cart by ID with product details
 async function getOneCart(req, res) {
   try {
-    const cart = await Cart.findById(req.params.id)
+    const cart = await Cart.findById(req.params.id).populate("items.product")
+    if (!cart) return res.status(404).json({ message: "Cart not found" })
     res.json(cart)
   } catch (error) {
     console.log(error)
@@ -22,56 +23,81 @@ async function getOneCart(req, res) {
   }
 }
 
-// Add a product to cart
+// Add a product (or increase quantity if exists)
 async function addItemToCart(req, res) {
   try {
-    const updatedCart = await Cart.findByIdAndUpdate(
-      req.params.id, // cart ID
-      { $push: { items: req.body } }, // add one new product
-      { new: true, runValidators: true }
+    const { product, quantity } = req.body
+    let cart = await Cart.findById(req.params.id)
+
+    if (!cart) return res.status(404).json({ message: "Cart not found" })
+
+    // check if product already in cart
+    const existingItem = cart.items.find(
+      (item) => item.product.toString() === product
     )
-    res.json(updatedCart)
+
+    if (existingItem) {
+      existingItem.quantity += quantity || 1
+    } else {
+      cart.items.push({ product, quantity: quantity || 1 })
+    }
+
+    await cart.save()
+    cart = await cart.populate("items.product")
+    res.json(cart)
   } catch (error) {
     console.log(error)
     res.status(400).json(error)
   }
 }
 
-// Remove a product from cart
+// Remove product from cart
 async function removeItemFromCart(req, res) {
   try {
-    const updatedCart = await Cart.findByIdAndUpdate(
-      req.params.id, // cart ID
-      { $pull: { items: { _id: req.params.itemId } } }, // remove item by its ID
-      { new: true }
+    let cart = await Cart.findById(req.params.id)
+    if (!cart) return res.status(404).json({ message: "Cart not found" })
+
+    cart.items = cart.items.filter(
+      (item) => item._id.toString() !== req.params.itemId
     )
-    res.json(updatedCart)
+
+    await cart.save()
+    cart = await cart.populate("items.product")
+    res.json(cart)
   } catch (error) {
     console.log(error)
     res.status(400).json(error)
   }
 }
 
-// Update entire cart (LIKE WHEN replace items or change quantities)
-async function updateCart(req, res) {
+// Update quantity of an item
+async function updateItemQuantity(req, res) {
   try {
-    const updatedCart = await Cart.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true, runValidators: true }
-    )
-    res.json(updatedCart)
+    const { quantity } = req.body
+    let cart = await Cart.findById(req.params.id)
+
+    if (!cart) return res.status(404).json({ message: "Cart not found" })
+
+    const item = cart.items.id(req.params.itemId)
+    if (!item) return res.status(404).json({ message: "Item not found" })
+
+    item.quantity = quantity
+    await cart.save()
+    cart = await cart.populate("items.product")
+
+    res.json(cart)
   } catch (error) {
     console.log(error)
     res.status(400).json(error)
   }
 }
 
-// Delete the whole cart
+// Delete entire cart
 async function deleteCart(req, res) {
   try {
     const deleted = await Cart.findByIdAndDelete(req.params.id)
-    res.json(deleted)
+    if (!deleted) return res.status(404).json({ message: "Cart not found" })
+    res.json({ message: "Cart deleted successfully" })
   } catch (error) {
     console.log(error)
     res.status(400).json(error)
@@ -83,6 +109,6 @@ export {
   getOneCart,
   addItemToCart,
   removeItemFromCart,
-  updateCart,
+  updateItemQuantity,
   deleteCart
 }

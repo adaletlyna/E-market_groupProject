@@ -47,7 +47,7 @@ const MyShop = () => {
       <div className="d-flex justify-content-end gap-3 p-3 bg-light">
         <Link to="/">🏠 Home</Link>
         <Link to="/add-product">➕ Add Product</Link>
-        <Link to="/view-products">📦 View Products</Link>
+        <Link to="/dashboard">📦 View Products</Link>
       </div>
 
       <div className="container mt-4">
@@ -62,23 +62,68 @@ const MyShop = () => {
             {products.map((product) => (
               <div key={product._id} className="col-md-4 mb-4">
                 <div className="card shadow-sm h-100">
-                  {product.image && (
+                  {/* ✅ Show multiple images */}
+                  {product.images && product.images.length > 0 ? (
+                    <div
+                      id={`carousel-${product._id}`}
+                      className="carousel slide"
+                      data-bs-ride="carousel"
+                    >
+                      <div className="carousel-inner">
+                        {product.images.map((img, idx) => (
+                          <div
+                            key={idx}
+                            className={`carousel-item ${idx === 0 ? "active" : ""}`}
+                          >
+                            <img
+                              src={img}
+                              className="d-block w-100"
+                              alt={`${product.name} ${idx + 1}`}
+                              style={{ height: "200px", objectFit: "cover" }}
+                              onError={(e) => (e.currentTarget.src = "/no-image.jpg")}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                      {product.images.length > 1 && (
+                        <>
+                          <button
+                            className="carousel-control-prev"
+                            type="button"
+                            data-bs-target={`#carousel-${product._id}`}
+                            data-bs-slide="prev"
+                          >
+                            <span className="carousel-control-prev-icon" aria-hidden="true"></span>
+                            <span className="visually-hidden">Previous</span>
+                          </button>
+                          <button
+                            className="carousel-control-next"
+                            type="button"
+                            data-bs-target={`#carousel-${product._id}`}
+                            data-bs-slide="next"
+                          >
+                            <span className="carousel-control-next-icon" aria-hidden="true"></span>
+                            <span className="visually-hidden">Next</span>
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  ) : (
                     <img
-                      src={product.image}
+                      src="/no-image.jpg"
                       className="card-img-top"
-                      alt={product.name}
+                      alt="No product"
                       style={{ height: "200px", objectFit: "cover" }}
                     />
                   )}
+
                   <div className="card-body d-flex flex-column">
                     <h5 className="card-title">{product.name}</h5>
                     <p className="card-text text-muted">{product.category}</p>
                     <p className="card-text">
                       <strong>${product.price}</strong>
                     </p>
-                    <p className="card-text small">
-                      Stock: {product.stock ?? "N/A"}
-                    </p>
+                    <p className="card-text small">Stock: {product.stock ?? "N/A"}</p>
 
                     {/* Buttons at bottom */}
                     <div className="mt-auto d-flex gap-2">

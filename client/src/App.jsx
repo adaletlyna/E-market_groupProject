@@ -17,7 +17,7 @@ import Footer from "./components/Footer";
 
 function App() {
   // Search state shared between HomePage/Dashboard if needed
-  //const [searchCategory, setSearchCategory] = useState("");
+  const [searchCategory, setSearchCategory] = useState("");
 
   return (
     

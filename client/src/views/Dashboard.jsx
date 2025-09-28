@@ -5,25 +5,32 @@ import SearchBar from "../components/SearchBar";
 
 const Dashboard = () => {
   const [products, setProducts] = useState([]);
-  const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
   const [quantities, setQuantities] = useState({});
   const [favoriteCart, setFavoriteCart] = useState([]);
-  const [categories, setCategories] = useState([]);
+
   const navigate = useNavigate();
 
+  // Hardcoded categories
+  const categories = [
+    "Electronics",
+    "Clothes",
+    "Books",
+    "Home & Kitchen",
+    "Beauty",
+    "Sports",
+    "Toys",
+  ];
+
+  // Fetch products
   useEffect(() => {
     axios
       .get("http://localhost:5000/api/products")
-      .then((res) => {
-        setProducts(res.data);
-        // Extract unique categories
-        const uniqueCats = [...new Set(res.data.map((p) => p.category || "Uncategorized"))];
-        setCategories(uniqueCats);
-      })
+      .then((res) => setProducts(res.data))
       .catch((err) => console.error(err));
   }, []);
 
+  // Handle quantity change
   const handleQuantityChange = (productId, value) => {
     setQuantities((prev) => ({
       ...prev,
@@ -31,6 +38,7 @@ const Dashboard = () => {
     }));
   };
 
+  // Add to favorites
   const handleAddToFavorite = (product) => {
     const quantity = quantities[product._id] || 1;
     const existing = favoriteCart.find((p) => p._id === product._id);
@@ -38,7 +46,9 @@ const Dashboard = () => {
     if (existing) {
       setFavoriteCart((prev) =>
         prev.map((p) =>
-          p._id === product._id ? { ...p, quantity: p.quantity + quantity } : p
+          p._id === product._id
+            ? { ...p, quantity: p.quantity + quantity }
+            : p
         )
       );
     } else {
@@ -46,23 +56,41 @@ const Dashboard = () => {
     }
   };
 
-  const handleBuyNow = (product) => {
-    const quantity = quantities[product._id] || 1;
-    alert(
-      `You bought ${quantity} of "${product.name}" for $${product.price * quantity}`
-    );
+  // Shop Now → Add to backend cart + go to /cart
+  const handleShopNow = async (productId) => {
+    try {
+      let cartId = localStorage.getItem("cartId");
+      const quantity = quantities[productId] || 1;
+
+      // If no cart exists, create one
+      if (!cartId) {
+        const newCart = await axios.post("http://localhost:5000/api/carts");
+        cartId = newCart.data._id;
+        localStorage.setItem("cartId", cartId);
+      }
+
+      // Add product with chosen quantity
+      await axios.put(`http://localhost:5000/api/carts/${cartId}/items`, {
+        product: productId,
+        quantity,
+      });
+
+      navigate("/cart");
+    } catch (error) {
+      console.error("Error adding to cart:", error);
+      alert("Something went wrong while adding to cart!");
+    }
   };
 
+  // Go to favorites page
   const handleGoToFavorites = () => {
     navigate("/favorites", { state: { favoriteCart } });
   };
 
-  // Filter products by search & category
-  const filteredProducts = products.filter((p) => {
-    const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase());
-    const matchesCategory = selectedCategory ? p.category === selectedCategory : true;
-    return matchesSearch && matchesCategory;
-  });
+  // Filter products by category
+  const filteredProducts = products.filter((p) =>
+    selectedCategory ? p.category === selectedCategory : true
+  );
 
   return (
     <div className="container-fluid p-4">
@@ -72,18 +100,12 @@ const Dashboard = () => {
           <Link to="/" className="me-3">🏠 Home</Link>
           <Link to="/categories">📂 Category</Link>
         </div>
-        <div className="d-flex align-items-center">
-          <input
-            type="text"
-            className="form-control me-2"
-            placeholder="Search products..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          <button className="btn btn-outline-success" onClick={handleGoToFavorites}>
-            🛒 ({favoriteCart.length})
-          </button>
-        </div>
+        <button
+          className="btn btn-outline-success"
+          onClick={handleGoToFavorites}
+        >
+          🛒 ({favoriteCart.length})
+        </button>
       </div>
 
       {/* Category Filter */}
@@ -93,6 +115,7 @@ const Dashboard = () => {
         onCategoryChange={setSelectedCategory}
       />
 
+      {/* Products Section */}
       <header style={{ textAlign: "center", margin: "20px 0" }}>
         <h1 style={{ margin: 0 }}>All Products</h1>
       </header>
@@ -106,12 +129,68 @@ const Dashboard = () => {
           {filteredProducts.map((p) => (
             <div key={p._id} className="col-12 col-sm-6 col-md-4 col-lg-3">
               <div className="card h-100 shadow-sm">
-                <img
-                  src={p.image || "/no-image.jpg"}
-                  className="card-img-top"
-                  alt={p.name}
-                  onError={(e) => (e.currentTarget.src = "/no-image.jpg")}
-                />
+                {/* Product Images */}
+                {p.images && p.images.length > 0 ? (
+                  <div
+                    id={`carousel-${p._id}`}
+                    className="carousel slide"
+                    data-bs-ride="carousel"
+                  >
+                    <div className="carousel-inner">
+                      {p.images.map((img, idx) => (
+                        <div
+                          key={idx}
+                          className={`carousel-item ${idx === 0 ? "active" : ""}`}
+                        >
+                          <img
+                            src={img}
+                            className="d-block w-100 card-img-top"
+                            alt={p.name}
+                            onError={(e) =>
+                              (e.currentTarget.src = "/no-image.jpg")
+                            }
+                          />
+                        </div>
+                      ))}
+                    </div>
+                    {p.images.length > 1 && (
+                      <>
+                        <button
+                          className="carousel-control-prev"
+                          type="button"
+                          data-bs-target={`#carousel-${p._id}`}
+                          data-bs-slide="prev"
+                        >
+                          <span
+                            className="carousel-control-prev-icon"
+                            aria-hidden="true"
+                          ></span>
+                          <span className="visually-hidden">Previous</span>
+                        </button>
+                        <button
+                          className="carousel-control-next"
+                          type="button"
+                          data-bs-target={`#carousel-${p._id}`}
+                          data-bs-slide="next"
+                        >
+                          <span
+                            className="carousel-control-next-icon"
+                            aria-hidden="true"
+                          ></span>
+                          <span className="visually-hidden">Next</span>
+                        </button>
+                      </>
+                    )}
+                  </div>
+                ) : (
+                  <img
+                    src="/no-image.jpg"
+                    className="card-img-top"
+                    alt="No image available"
+                  />
+                )}
+
+                {/* Product Info */}
                 <div className="card-body d-flex flex-column">
                   <h5 className="card-title">{p.name}</h5>
                   <p className="card-text flex-grow-1">{p.description}</p>
@@ -139,6 +218,12 @@ const Dashboard = () => {
                       onClick={() => handleAddToFavorite(p)}
                     >
                       Add to Favorite
+                    </button>
+                    <button
+                      className="btn btn-sm btn-primary flex-grow-1"
+                      onClick={() => handleShopNow(p._id)}
+                    >
+                      Shop Now
                     </button>
                   </div>
                 </div>

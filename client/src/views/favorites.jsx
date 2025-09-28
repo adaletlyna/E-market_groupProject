@@ -26,32 +26,38 @@ const Favorites = () => {
         <p>No products in favorites.</p>
       ) : (
         <div className="row g-4">
-          {favoriteCart.map((p) => (
-            <div key={p._id} className="col-12 col-sm-6 col-md-4 col-lg-3">
-              <div className="card h-100 shadow-sm">
-                <img
-                  src={p.image || "/no-image.jpg"}
-                  className="card-img-top"
-                  alt={p.name}
-                  onError={(e) => (e.currentTarget.src = "/no-image.jpg")}
-                />
-                <div className="card-body d-flex flex-column">
-                  <h5 className="card-title">{p.name}</h5>
-                  <p className="card-text flex-grow-1">{p.description}</p>
-                  <p className="fw-bold mb-2">${p.price}</p>
-                  <p>Quantity: {p.quantity}</p>
+          {favoriteCart.map((p) => {
+            // Get the first image from images array or fallback
+            const imgSrc = p.images && p.images.length > 0 ? p.images[0] : "/no-image.jpg";
 
-                  {/* Buy Now Button for this product */}
-                  <button
-                    className="btn btn-primary mt-auto"
-                    onClick={() => handleBuyNow(p)}
-                  >
-                    Buy Now
-                  </button>
+            return (
+              <div key={p._id} className="col-12 col-sm-6 col-md-4 col-lg-3">
+                <div className="card h-100 shadow-sm">
+                  <img
+                    src={imgSrc}
+                    className="card-img-top"
+                    alt={p.name}
+                    style={{ height: "200px", objectFit: "cover" }}
+                    onError={(e) => (e.currentTarget.src = "/no-image.jpg")}
+                  />
+                  <div className="card-body d-flex flex-column">
+                    <h5 className="card-title">{p.name}</h5>
+                    <p className="card-text flex-grow-1">{p.description}</p>
+                    <p className="fw-bold mb-2">${p.price}</p>
+                    <p>Quantity: {p.quantity}</p>
+
+                    {/* Buy Now Button */}
+                    <button
+                      className="btn btn-primary mt-auto"
+                      onClick={() => handleBuyNow(p)}
+                    >
+                      Buy Now
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
